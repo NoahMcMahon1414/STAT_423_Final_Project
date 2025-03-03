@@ -1,0 +1,120 @@
+Noah McMahon's Research Question:
+
+Can we predict a given wine's quality given a list of input attributes?
+
+For this research question, we will be using k-Nearest Neighbors, which is a classification method that determines the classification of some metric (in this case quality) based upon a given input's k nearest neighbors (by distance).
+
+```{r Installing & Loading the Necessary Packages}
+
+install.packages("e1071") 
+install.packages("caTools") 
+install.packages("class") 
+
+library(e1071) 
+library(caTools) 
+library(class)
+
+red_wines$quality <- as.factor(red_wines$quality)
+white_wines$quality <- as.factor(white_wines$quality)
+
+```
+
+First, we will split the data into a training and test set (80% training set and 20% test set). Additionally, we will scale the data for both the training and test sets as k-Nearest Neighbors relies on the arithmetic distance between inputs, which needs scaled features so all inputs have a chance to influence the outcome.
+
+```{r Data Splitting & Data Scaling}
+
+split_red <- sample.split(red_wines, SplitRatio = 0.8)
+split_white <- sample.split(white_wines, SplitRatio = 0.8)
+train_red <- subset(red_wines, split_red == TRUE)
+train_white <- subset(white_wines, split_white == TRUE)
+test_red <- subset(red_wines, split_red == FALSE)
+test_white <- subset(white_wines, split_white == FALSE)
+
+train_red_sc <- scale(train_red[, 1:11])
+test_red_sc <- scale(test_red[, 1:11])
+train_white_sc <- scale(train_white[, 1:11])
+test_white_sc <- scale(test_white[, 1:11])
+
+```
+
+For our next step, we will fit our k-Nearest Neighbor models (one for red wines, one for white wines) to our training sets, starting with k = 1. This means that the quality of a predicted input wine will be determined by the quality of its nearest neighbor.
+
+```{r First k-Nearest Neighbor with k = 1}
+
+red_classifier <- knn(train = train_red_sc, 
+                      test = test_red_sc, 
+                      cl = train_red$quality, 
+                      k = 1)
+
+white_classifier <- knn(train = train_white_sc, 
+                      test = test_white_sc, 
+                      cl = train_white$quality, 
+                      k = 1)
+
+```
+
+We will then display two confusion matrices, one for each model, to start to understand the accuracy of this classification method.
+
+```{r Red Wines Confusion Matrix}
+
+cm_red <- table(test_red$quality, red_classifier)
+cm_red
+
+```
+
+```{r White Wines Confusion Matrix}
+
+cm_white <- table(test_white$quality, white_classifier)
+cm_white
+
+```
+
+We can now find the accuracy of our classification model for different values of k in order to find the most accurate and best model.
+
+```{r Red Wines Finding Best k}
+
+library(ggplot2)
+
+k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50, 65, 73, 81, 89, 94, 96, 100)
+
+accuracy_values <- sapply(k_values, function(k) {
+  red_classifier <- knn(train = train_red_sc, 
+                        test = test_red_sc, 
+                        cl = train_red$quality, 
+                        k = k)
+  1 - mean(red_classifier != test_red$quality)
+})
+
+accuracy_data <- data.frame(K = k_values, Accuracy = accuracy_values)
+
+ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
+  geom_line(color = "red", size = 1) +
+  geom_point(color = "red", size = 3) +
+  labs(title = "Model Accuracy for Different K Values",
+       x = "Number of Neighbors (K)",
+       y = "Accuracy") +
+  theme_minimal()
+
+```
+
+```{r White Wines Finding Best k}
+
+accuracy_values <- sapply(k_values, function(k) {
+  white_classifier <- knn(train = train_white_sc, 
+                        test = test_white_sc, 
+                        cl = train_white$quality, 
+                        k = k)
+  1 - mean(white_classifier != test_white$quality)
+})
+
+accuracy_data <- data.frame(K = k_values, Accuracy = accuracy_values)
+
+ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
+  geom_line(color = "lightgrey", size = 1) +
+  geom_point(color = "lightgrey", size = 3) +
+  labs(title = "Model Accuracy for Different K Values",
+       x = "Number of Neighbors (K)",
+       y = "Accuracy") +
+  theme_minimal()
+
+```
