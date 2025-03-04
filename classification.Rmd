@@ -129,22 +129,20 @@ From the graphs above, we see that our best model is k-Nearest Neighbors with k 
 
 ```{r Installing Necessary Packages}
 
-install.packages("party")
-library(party)
+install.packages("randomForest")
+library(randomForest)
 
 ```
 
 ```{r Setting Up Random Forest Models}
 
-red_classifier_rf = cforest(quality ~ .,
-                            data = train_red,
-                            controls = cforest_control(
-                              mtry=2, mincriterion=0))
+red_classifier_rf = randomForest(x = train_red[-12], 
+                             y = train_red$quality, 
+                             ntree = 500)
 
-white_classifier_rf = cforest(quality ~ .,
-                            data = train_white,
-                            controls = cforest_control(
-                              mtry=2, mincriterion=0))
+white_classifier_rf = randomForest(x = train_white[-12], 
+                             y = train_white$quality, 
+                             ntree = 500)
 
 ```
 
@@ -163,10 +161,28 @@ cm = table(test_white[, 12], white_pred)
 cm
 
 ```
+```{r Accuracy: Red Wines}
 
-```{r Visualize Red Wines Tree}
-
-red_classifier_rf
+red_rf_accuracy <- 1 - mean(red_pred != test_red$quality)
+red_rf_accuracy
 
 ```
 
+```{r Accuracy: White Wines}
+
+white_rf_accuracy <- 1 - mean(white_pred != test_white$quality)
+white_rf_accuracy
+
+```
+
+```{r Variable Important Plot: Red Wines}
+
+varImpPlot(red_classifier_rf)
+
+```
+
+```{r Variable Important Plot: White Wines}
+
+varImpPlot(white_classifier_rf)
+
+```
