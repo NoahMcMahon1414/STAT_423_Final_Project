@@ -1,6 +1,8 @@
-Noah McMahon's Research Question:
+# Noah McMahon's Research Question:
 
-Can we predict a given wine's quality given a list of input attributes?
+# Can we predict a given wine's quality given a list of input attributes?
+
+## K-Nearest Neighbor Approach:
 
 For this research question, we will be using k-Nearest Neighbors, which is a classification method that determines the classification of some metric (in this case quality) based upon a given input's k nearest neighbors (by distance).
 
@@ -13,6 +15,8 @@ install.packages("class")
 library(e1071) 
 library(caTools) 
 library(class)
+
+set.seed(423) # For Consistency
 
 red_wines$quality <- as.factor(red_wines$quality)
 white_wines$quality <- as.factor(white_wines$quality)
@@ -75,7 +79,7 @@ We can now find the accuracy of our classification model for different values of
 
 library(ggplot2)
 
-k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50, 65, 73, 81, 89, 94, 96, 100)
+k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50, 65, 73, 81, 89, 94, 96, 100, 125, 150)
 
 accuracy_values <- sapply(k_values, function(k) {
   red_classifier <- knn(train = train_red_sc, 
@@ -118,3 +122,51 @@ ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
   theme_minimal()
 
 ```
+
+From the graphs above, we see that our best model is k-Nearest Neighbors with k = 1, which might be due to the fact that using more neighbors might create more noise. However, k-Nearest Neighbors overall does not seem to have great classification accuracy, which leads us to our next model, Random Trees.
+
+## Random Forest Approach:
+
+```{r Installing Necessary Packages}
+
+install.packages("party")
+library(party)
+
+```
+
+```{r Setting Up Random Forest Models}
+
+red_classifier_rf = cforest(quality ~ .,
+                            data = train_red,
+                            controls = cforest_control(
+                              mtry=2, mincriterion=0))
+
+white_classifier_rf = cforest(quality ~ .,
+                            data = train_white,
+                            controls = cforest_control(
+                              mtry=2, mincriterion=0))
+
+```
+
+```{r Prediction & Confusion Matrix: Red}
+
+red_pred = predict(red_classifier_rf, newdata = test_red[-12])
+cm = table(test_red[, 12], red_pred)
+cm
+
+```
+
+```{r Prediction & Confusion Matrix: White}
+
+white_pred = predict(white_classifier_rf, newdata = test_white[-12])
+cm = table(test_white[, 12], white_pred)
+cm
+
+```
+
+```{r Visualize Red Wines Tree}
+
+red_classifier_rf
+
+```
+
