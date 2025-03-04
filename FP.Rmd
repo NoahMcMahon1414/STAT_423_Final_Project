@@ -1,0 +1,234 @@
+---
+title: "Final Project"
+author: "Caroline Huang"
+date: "2025-03-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(car)  # For VIF
+```
+
+```{r}
+red_wines <- read.csv2("/Users/xiyuehuang/Desktop/STAT 423/wine+quality/winequality-red.csv")
+white_wines <- read.csv2("/Users/xiyuehuang/Desktop/STAT 423/wine+quality/winequality-white.csv")
+```
+
+```{r}
+red_wines$quality <- as.numeric(red_wines$quality)
+red_wines$fixed.acidity <- as.numeric(red_wines$fixed.acidity)
+red_wines$volatile.acidity <- as.numeric(red_wines$volatile.acidity)
+red_wines$citric.acid <- as.numeric(red_wines$citric.acid)
+red_wines$residual.sugar <- as.numeric(red_wines$residual.sugar)
+red_wines$chlorides <- as.numeric(red_wines$chlorides)
+red_wines$free.sulfur.dioxide <- as.numeric(red_wines$free.sulfur.dioxide)
+red_wines$total.sulfur.dioxide <- as.numeric(red_wines$total.sulfur.dioxide)
+red_wines$density <- as.numeric(red_wines$density)
+red_wines$pH <- as.numeric(red_wines$pH)
+red_wines$sulphates <- as.numeric(red_wines$sulphates)
+red_wines$alcohol <- as.numeric(red_wines$alcohol)
+
+white_wines$quality <- as.numeric(white_wines$quality)
+white_wines$fixed.acidity <- as.numeric(white_wines$fixed.acidity)
+white_wines$volatile.acidity <- as.numeric(white_wines$volatile.acidity)
+white_wines$citric.acid <- as.numeric(white_wines$citric.acid)
+white_wines$residual.sugar <- as.numeric(white_wines$residual.sugar)
+white_wines$chlorides <- as.numeric(white_wines$chlorides)
+white_wines$free.sulfur.dioxide <- as.numeric(white_wines$free.sulfur.dioxide)
+white_wines$total.sulfur.dioxide <- as.numeric(white_wines$total.sulfur.dioxide)
+white_wines$density <- as.numeric(white_wines$density)
+white_wines$pH <- as.numeric(white_wines$pH)
+white_wines$sulphates <- as.numeric(white_wines$sulphates)
+white_wines$alcohol <- as.numeric(white_wines$alcohol)
+```
+
+
+# Red Wine Analysis
+```{r}
+lm_test_red <- lm(quality ~ ., data = red_wines)
+summary(lm_test_red)
+```
+
+```{r}
+# Compute Cook’s Distance
+cooksd <- cooks.distance(lm_test_red)
+
+# Visualize Cook’s Distance
+plot(cooksd, type="h", main="Cook’s Distance", ylab="Cook's Distance")
+
+# Residuals vs. Leverage Plot (Identifies outliers in regression)
+plot(lm_test_red, which=5)
+```
+```{r}
+# Compute correlation matrix
+cor_matrix <- cor(red_wines)
+corrplot(cor_matrix, method="color", type="lower")
+
+# Calculate Variance Inflation Factor (VIF)
+vif_values <- vif(lm_test_red)
+
+# Print VIF values
+print(vif_values)
+```
+
+# White Wine Analysis
+
+```{r}
+lm_test_white <- lm(quality ~ ., data = white_wines)
+summary(lm_test_white)
+```
+
+```{r}
+# Compute Cook’s Distance
+cooksd <- cooks.distance(lm_test_white)
+
+# Identify influential observations (Threshold: 0.1)
+influential_points <- which(cooksd > 0.1)
+
+# Visualize Cook’s Distance
+plot(cooksd, type="h", main="Cook’s Distance", ylab="Cook's Distance")
+abline(h = 0.1, col="red", lty=2)
+
+# Residuals vs. Leverage Plot (Identifies outliers in regression)
+plot(lm_test_white, which=5)
+```
+
+```{r}
+white_wines[influential_points, ]
+```
+Observation 2782
+	•	Extremely high volatile acidity (0.965) -  Most wines range 0.2 - 0.8.
+	•	Extremely high residual sugar (65.8 g/L) -  Normal range is below 10 g/L.
+	•	Very high density (1.03898) -  Usually ranges 0.990 - 1.005.
+Suspicious: This wine has unusually high residual sugar and volatile acidity, making it a likely sweet, spoiled, or artificially manipulated sample.
+
+Observation 4746
+	•	Extremely high free sulfur dioxide (289 mg/L) - Normal range is 10 - 50 mg/L.
+	•	Extremely high total sulfur dioxide (440 mg/L) - Legal limits for red wine are ~150 mg/L.
+	•	Unusually low density (0.99314) - Suggests watered-down wine or an error.
+Likely an anomaly: The extreme sulfur levels and density make this observation highly suspicious—it may be a data entry error.
+
+```{r}
+# Remove extreme points only if they are highly influential
+white_wine2 <- wine[-c(2782, 4746), ]
+
+# Fit model without these points
+lm_white2 <- lm(quality ~ ., data=white_wine2)
+
+# Compare Adjusted R² and RMSE
+summary(lm_white2)
+rmse_white2 <- sqrt(mean(residuals(lm_white2)^2))
+print(paste("RMSE (After Removing 2782 & 4746):", rmse_white2))
+```
+
+
+Comparing models about some extreme residuals
+
+```{r}
+# Check for extreme standardized residuals (|residual| > 3)
+residuals_df <- data.frame(index = 1:nrow(white_wine2), residuals = rstandard(lm_white2))
+
+# Extract extreme residuals
+extreme_residuals <- residuals_df[abs(residuals_df$residuals) > 3, ]
+```
+
+```{r}
+# Remove extreme residuals
+wine_cleaned <- white_wine2[-extreme_residuals$index, ]
+
+# Fit new model without extreme outliers
+lm_cleaned <- lm(quality ~ ., data=wine_cleaned)
+
+# Compute RMSE
+rmse_cleaned <- sqrt(mean(residuals(lm_cleaned)^2))
+```
+
+```{r}
+# Apply log transformation to quality (to reduce skewness)
+white_wine2$log_quality <- log(white_wine2$quality + 1)  # Adding 1 to avoid log(0)
+
+# Fit new model with transformed response
+lm_transformed <- lm(log_quality ~ . -quality, data=white_wine2)
+
+# Compute RMSE
+rmse_transformed <- sqrt(mean(residuals(lm_transformed)^2))
+```
+
+```{r}
+comparison <- data.frame(
+  Model = c("All Data", "Without Outliers", "Log Transformed"),
+  Adjusted_R2 = c(summary(lm_white2)$adj.r.squared, summary(lm_cleaned)$adj.r.squared, summary(lm_transformed)$adj.r.squared),
+  RMSE = c(rmse_white2, rmse_cleaned, rmse_transformed)
+)
+
+print(comparison)
+```
+
+So we prefer drop those extreme residuals. So we will use wine_cleaned data and lm_cleaned model.
+
+
+```{r}
+# Compute correlation matrix
+cor_matrix <- cor(wine_cleaned)
+corrplot(cor_matrix, method="color", type="lower")
+
+# Calculate Variance Inflation Factor (VIF)
+vif_values <- vif(lm_cleaned)
+
+# Convert to a dataframe for better visualization
+vif_df <- data.frame(Variable = names(vif_values), VIF = vif_values)
+
+# Sort VIF values in descending order for easy analysis
+vif_df <- vif_df[order(-vif_df$VIF), ]
+
+# Print in a readable table format
+print(vif_df, row.names = FALSE)
+```
+
+
+```{r}
+# Drop the 'density' variable
+wine_updated <- wine_cleaned %>% select(-density)
+
+# Fit new model without 'density'
+lm_new <- lm(quality ~ ., data=wine_updated)
+
+# Summary of the new model
+summary(lm_new)
+
+vif_no_density <- vif(lm_new)
+print(vif_no_density)
+```
+
+```{r}
+# Compute Adjusted R² for both models
+adj_r2_old <- summary(lm_cleaned)$adj.r.squared
+adj_r2_new <- summary(lm_new)$adj.r.squared
+
+# Compute RMSE for both models
+rmse_old <- sqrt(mean(residuals(lm_cleaned)^2))
+rmse_new <- sqrt(mean(residuals(lm_new)^2))
+
+# Compute AIC and BIC for both models
+aic_old <- AIC(lm_cleaned)
+aic_new <- AIC(lm_new)
+
+bic_old <- BIC(lm_cleaned)
+bic_new <- BIC(lm_new)
+
+# Create a comparison table
+comparison_df <- data.frame(
+  Model = c("Original Model", "Without Density"),
+  Adjusted_R2 = c(adj_r2_old, adj_r2_new),
+  RMSE = c(rmse_old, rmse_new),
+  AIC = c(aic_old, aic_new),
+  BIC = c(bic_old, bic_new)
+)
+
+# Print comparison results
+print(comparison_df)
+```
