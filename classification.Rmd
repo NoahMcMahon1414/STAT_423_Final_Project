@@ -8,6 +8,8 @@ For this research question, we will be using k-Nearest Neighbors, which is a cla
 
 ```{r Installing & Loading the Necessary Packages}
 
+# Use Wine_Updated!!!
+
 install.packages("e1071") 
 install.packages("caTools") 
 install.packages("class") 
@@ -19,7 +21,7 @@ library(class)
 set.seed(423) # For Consistency
 
 red_wines$quality <- as.factor(red_wines$quality)
-white_wines$quality <- as.factor(white_wines$quality)
+wine_updated$quality <- as.factor(wine_updated$quality)
 
 ```
 
@@ -28,16 +30,16 @@ First, we will split the data into a training and test set (80% training set and
 ```{r Data Splitting & Data Scaling}
 
 split_red <- sample.split(red_wines, SplitRatio = 0.8)
-split_white <- sample.split(white_wines, SplitRatio = 0.8)
+split_white <- sample.split(wine_updated, SplitRatio = 0.8)
 train_red <- subset(red_wines, split_red == TRUE)
-train_white <- subset(white_wines, split_white == TRUE)
+train_white <- subset(wine_updated, split_white == TRUE)
 test_red <- subset(red_wines, split_red == FALSE)
-test_white <- subset(white_wines, split_white == FALSE)
+test_white <- subset(wine_updated, split_white == FALSE)
 
 train_red_sc <- scale(train_red[, 1:11])
 test_red_sc <- scale(test_red[, 1:11])
-train_white_sc <- scale(train_white[, 1:11])
-test_white_sc <- scale(test_white[, 1:11])
+train_white_sc <- scale(train_white[, 1:10])
+test_white_sc <- scale(test_white[, 1:10])
 
 ```
 
@@ -79,7 +81,7 @@ We can now find the accuracy of our classification model for different values of
 
 library(ggplot2)
 
-k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50, 65, 73, 81, 89, 94, 96, 100, 125, 150)
+k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50)
 
 accuracy_values <- sapply(k_values, function(k) {
   red_classifier <- knn(train = train_red_sc, 
@@ -140,7 +142,7 @@ red_classifier_rf = randomForest(x = train_red[-12],
                              y = train_red$quality, 
                              ntree = 500)
 
-white_classifier_rf = randomForest(x = train_white[-12], 
+white_classifier_rf = randomForest(x = train_white[-11], 
                              y = train_white$quality, 
                              ntree = 500)
 
@@ -157,7 +159,7 @@ cm
 ```{r Prediction & Confusion Matrix: White}
 
 white_pred = predict(white_classifier_rf, newdata = test_white[-12])
-cm = table(test_white[, 12], white_pred)
+cm = table(test_white[, 11], white_pred)
 cm
 
 ```

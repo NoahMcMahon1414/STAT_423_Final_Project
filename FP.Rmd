@@ -114,7 +114,7 @@ Likely an anomaly: The extreme sulfur levels and density make this observation h
 
 ```{r}
 # Remove extreme points only if they are highly influential
-white_wine2 <- wine[-c(2782, 4746), ]
+white_wine2 <- white_wine[-c(2782, 4746), ]
 
 # Fit model without these points
 lm_white2 <- lm(quality ~ ., data=white_wine2)
