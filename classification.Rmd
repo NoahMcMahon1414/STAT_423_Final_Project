@@ -144,6 +144,8 @@ library(randomForest)
 
 ```{r Setting Up Random Forest Models}
 
+set.seed(423) # For Consistency
+
 red_classifier_rf = randomForest(x = train_red[-12], 
                              y = train_red$quality, 
                              ntree = 500)
