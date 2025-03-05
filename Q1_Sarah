@@ -1,0 +1,110 @@
+---
+title: "Question 1"
+author: "Sarah Koh"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(car)
+library(corrplot)
+library(glmnet) 
+library(caret)  
+
+# -------------------------------
+# 1. Load Data
+# -------------------------------
+red_wine <- read.csv("winequality-red.csv", sep = ";")
+white_wine <- read.csv("winequality-white.csv", sep = ";")
+
+# -------------------------------
+# 2. Identify and Remove Extreme Residual Outliers from White Wine
+# -------------------------------
+# Fit an initial regression model for white wine
+lm_white_initial <- lm(quality ~ ., data = white_wine)
+
+# Compute standardized residuals
+white_wine$residuals <- rstandard(lm_white_initial)
+
+# Identify outliers with extreme residuals (|residual| > 3)
+extreme_residuals <- abs(white_wine$residuals) > 3
+
+# Remove only those extreme residual outliers
+white_wine_cleaned <- white_wine[!extreme_residuals, ]
+
+# Drop "density" and "residuals" columns correctly
+white_wine_cleaned <- white_wine_cleaned[, !(names(white_wine_cleaned) %in% c("density", "residuals"))]
+
+# -------------------------------
+# 3. Fit Regression Models for Red & White Wine
+# -------------------------------
+lm_red <- lm(quality ~ ., data = red_wine)
+lm_white <- lm(quality ~ ., data = white_wine_cleaned)
+
+# -------------------------------
+# 4. Check Variance Inflation Factor (VIF) to Detect Multicollinearity
+# -------------------------------
+print("VIF for Red Wine Model:")
+vif_red <- vif(lm_red)
+print(vif_red)
+
+print("VIF for White Wine Model:")
+vif_white <- vif(lm_white)
+print(vif_white)
+
+# -------------------------------
+# 5. Identify Most and Least Significant Features
+# -------------------------------
+# Extract coefficients, standard errors, and p-values for red wine
+coefficients_red <- as.data.frame(summary(lm_red)$coefficients)
+colnames(coefficients_red) <- c("Estimate", "Std. Error", "t value", "p value")
+coefficients_red$Feature <- rownames(coefficients_red)
+
+# Extract coefficients, standard errors, and p-values for white wine
+coefficients_white <- as.data.frame(summary(lm_white)$coefficients)
+colnames(coefficients_white) <- c("Estimate", "Std. Error", "t value", "p value")
+coefficients_white$Feature <- rownames(coefficients_white)
+
+# Sort features by significance for red wine
+coefficients_red_sorted <- coefficients_red %>%
+  filter(Feature != "(Intercept)") %>%
+  arrange(`p value`)
+
+# Sort features by significance for white wine
+coefficients_white_sorted <- coefficients_white %>%
+  filter(Feature != "(Intercept)") %>%
+  arrange(`p value`)
+
+# Print most and least significant features
+print("Most Significant Features for Red Wine:")
+print(head(coefficients_red_sorted, 3))
+
+print("Least Significant Features for Red Wine:")
+print(tail(coefficients_red_sorted, 3))
+
+print("Most Significant Features for White Wine:")
+print(head(coefficients_white_sorted, 3))
+
+print("Least Significant Features for White Wine:")
+print(tail(coefficients_white_sorted, 3))
+
+
+```
+
+# 6. Visualize Feature Importance
+# -------------------------------
+# Red Wine Feature Importance Plot
+ggplot(coefficients_red_sorted, aes(x = reorder(Feature, `p value`), y = -log10(`p value`))) +
+  geom_bar(stat = "identity", fill = "red") +
+  coord_flip() +
+  labs(title = "Feature Significance in Red Wine Quality", x = "Features", y = "-log10(p-value)")
+
+# White Wine Feature Importance Plot
+ggplot(coefficients_white_sorted, aes(x = reorder(Feature, `p value`), y = -log10(`p value`))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Feature Significance in White Wine Quality", x = "Features", y = "-log10(p-value)")
