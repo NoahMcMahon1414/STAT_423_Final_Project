@@ -47,6 +47,8 @@ For our next step, we will fit our k-Nearest Neighbor models (one for red wines,
 
 ```{r First k-Nearest Neighbor with k = 1}
 
+set.seed(423) # For Consistency
+
 red_classifier <- knn(train = train_red_sc, 
                       test = test_red_sc, 
                       cl = train_red$quality, 
@@ -81,6 +83,8 @@ We can now find the accuracy of our classification model for different values of
 
 library(ggplot2)
 
+set.seed(423) # For Consistency
+
 k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50)
 
 accuracy_values <- sapply(k_values, function(k) {
@@ -96,7 +100,7 @@ accuracy_data <- data.frame(K = k_values, Accuracy = accuracy_values)
 ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
   geom_line(color = "red", size = 1) +
   geom_point(color = "red", size = 3) +
-  labs(title = "Model Accuracy for Different K Values",
+  labs(title = "Red Wine Model Accuracy for Different K Values",
        x = "Number of Neighbors (K)",
        y = "Accuracy") +
   theme_minimal()
@@ -104,6 +108,8 @@ ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
 ```
 
 ```{r White Wines Finding Best k}
+
+set.seed(423) # For Consistency
 
 accuracy_values <- sapply(k_values, function(k) {
   white_classifier <- knn(train = train_white_sc, 
