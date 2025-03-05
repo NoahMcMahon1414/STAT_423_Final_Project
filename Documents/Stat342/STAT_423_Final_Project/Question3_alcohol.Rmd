@@ -1,0 +1,206 @@
+---
+title: "Question 3 - Final Project"
+author: "Vy Nguyen"
+date: "2025-03-02"
+output: pdf_document
+---
+
+```{r Necessary Packages}
+library(tidyverse)
+library(ggplot2)
+library(car)
+library(corrplot)
+```
+
+```{r Importing Data}
+red_wines <- read.csv2("winequality-red.csv")
+white_wines <- read.csv2("winequality-white.csv")
+```
+
+First Look at the Data:
+
+```{r First Look}
+head(red_wines)
+
+head(white_wines)
+```
+
+Casting Data into Appropriate Types:
+
+```{r Casting}
+
+red_wines$quality <- as.numeric(red_wines$quality)
+red_wines$fixed.acidity <- as.numeric(red_wines$fixed.acidity)
+red_wines$volatile.acidity <- as.numeric(red_wines$volatile.acidity)
+red_wines$citric.acid <- as.numeric(red_wines$citric.acid)
+red_wines$residual.sugar <- as.numeric(red_wines$residual.sugar)
+red_wines$chlorides <- as.numeric(red_wines$chlorides)
+red_wines$free.sulfur.dioxide <- as.numeric(red_wines$free.sulfur.dioxide)
+red_wines$total.sulfur.dioxide <- as.numeric(red_wines$total.sulfur.dioxide)
+red_wines$density <- as.numeric(red_wines$density)
+red_wines$pH <- as.numeric(red_wines$pH)
+red_wines$sulphates <- as.numeric(red_wines$sulphates)
+red_wines$alcohol <- as.numeric(red_wines$alcohol)
+
+white_wines$quality <- as.numeric(white_wines$quality)
+white_wines$fixed.acidity <- as.numeric(white_wines$fixed.acidity)
+white_wines$volatile.acidity <- as.numeric(white_wines$volatile.acidity)
+white_wines$citric.acid <- as.numeric(white_wines$citric.acid)
+white_wines$residual.sugar <- as.numeric(white_wines$residual.sugar)
+white_wines$chlorides <- as.numeric(white_wines$chlorides)
+white_wines$free.sulfur.dioxide <- as.numeric(white_wines$free.sulfur.dioxide)
+white_wines$total.sulfur.dioxide <- as.numeric(white_wines$total.sulfur.dioxide)
+white_wines$density <- as.numeric(white_wines$density)
+white_wines$pH <- as.numeric(white_wines$pH)
+white_wines$sulphates <- as.numeric(white_wines$sulphates)
+white_wines$alcohol <- as.numeric(white_wines$alcohol)
+
+```
+
+Second Look at Data:
+
+```{r Data After Casting}
+
+head(red_wines)
+
+head(white_wines)
+
+```
+
+# White wine
+
+```{r}
+
+white_wines <- white_wines[-c(2782, 4746), ]
+
+cor_matrix <- cor(white_wines)
+print(cor_matrix)
+```
+
+
+# white wine Models
+
+```{r}
+# CHeck IVF to decide which factor to use
+model_full <- lm(quality ~ ., data = white_wines)
+#vif(model)
+```
+
+```{r}
+model_alcohol <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid + chlorides + pH + free.sulfur.dioxide + sulphates + total.sulfur.dioxide + alcohol + residual.sugar, data = white_wines)
+vif(model_alcohol)
+```
+
+```{r}
+interaction_model <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid + chlorides + pH + free.sulfur.dioxide + sulphates + total.sulfur.dioxide + alcohol + residual.sugar + residual.sugar*alcohol, data = white_wines)
+```
+
+```{r}
+model_no_alcohol <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid + chlorides + pH + free.sulfur.dioxide + sulphates + total.sulfur.dioxide + residual.sugar, data = white_wines)
+```
+
+# Calulate F-test: 
+
+```{r}
+summary(interaction_model)
+```
+
+```{r}
+summary(model_alcohol)
+```
+
+```{r}
+summary(model_no_alcohol)
+```
+
+```{r}
+AIC(interaction_model, model_alcohol)
+```
+
+We favor model that has the interaction term
+
+## Not include interaction : 
+
+```{r}
+anova(model_alcohol, model_no_alcohol)
+```
+
+### AIC method: 
+
+```{r}
+AIC(model_alcohol, model_no_alcohol)
+```
+
+
+## Interaction vs No Alcohol Model: 
+
+```{r}
+AIC(interaction_model, model_no_alcohol)
+```
+### P-value 
+
+H_0: beta_alcohol = 0
+
+F statistic
+
+```{r}
+anova(interaction_model, model_no_alcohol)
+```
+
+Since the p-value is extremely small 2.2*e-16, which is well below the 0.01 significance level, we can reject the null hypothesis that the coefficient of alcohol is zero. This provides strong evidence that alcohol has a significant effect on white wine quality.
+
+Furthermore, combining the F-test results with the AIC comparison, we find strong support for alcohol being an important factor in influencing white wine quality.
+
+Thus, higher alcohol content will result in higher quality of wine. 
+
+# Red wine
+
+```{r}
+red_correlation <- cor(red_wines)
+#print(red_correlation )
+```
+
+
+```{r}
+# CHeck IVF to decide which factor to use
+red_model_full <- lm(quality ~ ., data = red_wines)
+vif(red_model_full)
+```
+
+```{r}
+red_reduced_model <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid + chlorides + pH + free.sulfur.dioxide + sulphates + total.sulfur.dioxide + residual.sugar + density, data = red_wines)
+```
+
+```{r}
+summary(red_model_full)
+```
+
+
+```{r}
+AIC(red_model_full, red_reduced_model)
+```
+
+```{r}
+anova(red_model_full, red_reduced_model)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
