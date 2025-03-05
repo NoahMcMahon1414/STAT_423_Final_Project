@@ -1,0 +1,97 @@
+---
+title: "Question6"
+output: html_document
+date: "2025-03-05"
+---
+
+```{r Necessary Packages}
+
+library(tidyverse)
+library(ggplot2)
+install.packages("corrplot")
+library(corrplot)
+
+```
+
+```{r Importing Data}
+
+red_wines <- read.csv2("winequality-red.csv")
+white_wines <- read.csv2("winequality-white.csv")
+
+```
+
+First Look at the Data:
+
+```{r First Look}
+
+head(red_wines)
+
+head(white_wines)
+
+```
+
+Casting Data into Appropriate Types:
+
+```{r Casting}
+
+red_wines$quality <- as.numeric(red_wines$quality)
+red_wines$fixed.acidity <- as.numeric(red_wines$fixed.acidity)
+red_wines$volatile.acidity <- as.numeric(red_wines$volatile.acidity)
+red_wines$citric.acid <- as.numeric(red_wines$citric.acid)
+red_wines$residual.sugar <- as.numeric(red_wines$residual.sugar)
+red_wines$chlorides <- as.numeric(red_wines$chlorides)
+red_wines$free.sulfur.dioxide <- as.numeric(red_wines$free.sulfur.dioxide)
+red_wines$total.sulfur.dioxide <- as.numeric(red_wines$total.sulfur.dioxide)
+red_wines$density <- as.numeric(red_wines$density)
+red_wines$pH <- as.numeric(red_wines$pH)
+red_wines$sulphates <- as.numeric(red_wines$sulphates)
+red_wines$alcohol <- as.numeric(red_wines$alcohol)
+
+white_wines$quality <- as.numeric(white_wines$quality)
+white_wines$fixed.acidity <- as.numeric(white_wines$fixed.acidity)
+white_wines$volatile.acidity <- as.numeric(white_wines$volatile.acidity)
+white_wines$citric.acid <- as.numeric(white_wines$citric.acid)
+white_wines$residual.sugar <- as.numeric(white_wines$residual.sugar)
+white_wines$chlorides <- as.numeric(white_wines$chlorides)
+white_wines$free.sulfur.dioxide <- as.numeric(white_wines$free.sulfur.dioxide)
+white_wines$total.sulfur.dioxide <- as.numeric(white_wines$total.sulfur.dioxide)
+white_wines$density <- as.numeric(white_wines$density)
+white_wines$pH <- as.numeric(white_wines$pH)
+white_wines$sulphates <- as.numeric(white_wines$sulphates)
+white_wines$alcohol <- as.numeric(white_wines$alcohol)
+
+```
+
+Second Look at Data:
+
+```{r white wine}
+lm_test_white <- lm(quality ~ ., data = white_wines)
+summary(lm_test_white)
+```
+`
+```{r white wine data cleaning}
+# Remove influential, extreme points
+white_wines <- white_wines[-c(2782, 4746), ]
+
+# Storing all standard residuals
+residuals_df <- data.frame(index = 1:nrow(white_wines), residuals = rstandard(lm(quality ~ ., data=white_wines)))
+# Extract extreme residuals
+extreme_residuals <- residuals_df[abs(residuals_df$residuals) > 3, ]
+
+# Remove data points with extreme residuals
+white_wine_cleaned <- white_wines[-extreme_residuals$index, ]
+
+# drop density variable from the model
+white_wine_final <- white_wine_cleaned %>% select(-density)
+
+```
+
+```{r White and red wine summary}
+white_model <- lm(quality ~ ., data = white_wine_final)
+summary(white_model)
+
+lm_test_red <- lm(quality ~ ., data = red_wines)
+summary(lm_test_red)
+```
+
+
