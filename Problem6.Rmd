@@ -83,15 +83,49 @@ white_wine_cleaned <- white_wines[-extreme_residuals$index, ]
 
 # drop density variable from the model
 white_wine_final <- white_wine_cleaned %>% select(-density)
+red_wine_test <- red_wines %>% select(-density)
 
 ```
 
 ```{r White and red wine summary}
 white_model <- lm(quality ~ ., data = white_wine_final)
 summary(white_model)
+summary_w <- as.data.frame(coef(summary(white_model)))
 
-lm_test_red <- lm(quality ~ ., data = red_wines)
-summary(lm_test_red)
+red_model <- lm(quality ~ ., data = red_wine_test)
+summary_r <- as.data.frame(coef(summary(red_model)))
+summary(red_model)
+```
+```{r 95% CI}
+white_CI <- as.data.frame(confint(white_model))
+
+red_CI <- as.data.frame(confint(red_model))
+coeff <- c(rownames(white_CI))
+
+df_w <- data.frame(coefficients = coeff,
+                   estimate = summary_w$Estimate,
+                   lower = white_CI$`2.5 %`,
+                   upper = white_CI$`97.5 %`,
+                   wine_type = "White")
+df_w$coefficients <- paste(df_w$coefficients,"(white)", sep=" ")
+df_r <- data.frame(coefficients = coeff,
+                   estimate = summary_r$Estimate,
+                   lower = red_CI$`2.5 %`,
+                   upper = red_CI$`97.5 %`,
+                   wine_type = "Red")
+df_r$coefficients <- paste(df_r$coefficients,"(red)", sep=" ")
+all_wines <- rbind(df_w, df_r)
+
+ggplot(all_wines, aes(x = estimate, y = coefficients)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), color = ifelse(all_wines$wine_type == "White", "steelblue", "red"))
+
 ```
 
 
+```{r compare vif white}
+vif(white_model)
+```
+```{r compare vif white}
+vif(red_model)
+```
