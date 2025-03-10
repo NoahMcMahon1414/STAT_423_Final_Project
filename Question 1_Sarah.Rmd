@@ -1,0 +1,214 @@
+---
+title: "Question 1"
+author: "Sarah Koh"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(car)
+library(corrplot)
+library(glmnet)    # For LASSO regression
+library(caret)     # For data preprocessing
+
+# -------------------------------
+# 1. Load Data
+# -------------------------------
+red_wine <- read.csv("winequality-red.csv", sep = ";")
+white_wine <- read.csv("winequality-white.csv", sep = ";")
+
+
+# -------------------------------
+# 2. Identify and Remove Extreme Residual Outliers from White Wine
+# -------------------------------
+# Fit an initial regression model for white wine
+lm_white_initial <- lm(quality ~ ., data = white_wine)
+
+# Compute standardized residuals
+white_wine$residuals <- rstandard(lm_white_initial)
+
+# Identify outliers with extreme residuals (|residual| > 3)
+extreme_residuals <- abs(white_wine$residuals) > 3
+
+# Remove only those extreme residual outliers
+white_wine_cleaned <- white_wine[!extreme_residuals, ]
+
+# Drop "density" and "residuals" columns correctly
+white_wine_cleaned <- white_wine_cleaned[, !(names(white_wine_cleaned) %in% c("density", "residuals"))]
+
+# -------------------------------
+# 3. Fit Regression Models for Red & White Wine
+# -------------------------------
+lm_red <- lm(quality ~ ., data = red_wine)
+lm_white <- lm(quality ~ ., data = white_wine_cleaned)
+
+# -------------------------------
+# 4. Check Variance Inflation Factor (VIF) to Detect Multicollinearity
+# -------------------------------
+print("VIF for Red Wine Model:")
+vif_red <- vif(lm_red)
+print(vif_red)
+
+print("VIF for White Wine Model:")
+vif_white <- vif(lm_white)
+print(vif_white)
+
+# -------------------------------
+# 5. Identify Most and Least Significant Features
+# -------------------------------
+# Extract coefficients, standard errors, and p-values for red wine
+coefficients_red <- as.data.frame(summary(lm_red)$coefficients)
+colnames(coefficients_red) <- c("Estimate", "Std. Error", "t value", "p value")
+coefficients_red$Feature <- rownames(coefficients_red)
+
+# Extract coefficients, standard errors, and p-values for white wine
+coefficients_white <- as.data.frame(summary(lm_white)$coefficients)
+colnames(coefficients_white) <- c("Estimate", "Std. Error", "t value", "p value")
+coefficients_white$Feature <- rownames(coefficients_white)
+
+# Sort features by significance for red wine
+coefficients_red_sorted <- coefficients_red %>%
+  filter(Feature != "(Intercept)") %>%
+  arrange(`p value`)
+
+# Sort features by significance for white wine
+coefficients_white_sorted <- coefficients_white %>%
+  filter(Feature != "(Intercept)") %>%
+  arrange(`p value`)
+
+
+```
+```{r}
+# Print most and least significant features
+print("Most Significant Features for Red Wine:")
+print(head(coefficients_red_sorted, 3))
+
+print("Least Significant Features for Red Wine:")
+print(tail(coefficients_red_sorted, 3))
+
+print("Most Significant Features for White Wine:")
+print(head(coefficients_white_sorted, 3))
+
+print("Least Significant Features for White Wine:")
+print(tail(coefficients_white_sorted, 3))
+```
+
+
+# 6. Visualize Feature Importance
+# -------------------------------
+# Red Wine Feature Importance Plot
+```{r}
+ggplot(coefficients_red_sorted, aes(x = reorder(Feature, `p value`), y = -log10(`p value`))) +
+  geom_bar(stat = "identity", fill = "red") +
+  coord_flip() +
+  labs(title = "Feature Significance in Red Wine Quality", x = "Features", y = "-log10(p-value)")
+```
+
+# White Wine Feature Importance Plot
+```{r}
+ggplot(coefficients_white_sorted, aes(x = reorder(Feature, `p value`), y = -log10(`p value`))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Feature Significance in White Wine Quality", x = "Features", y = "-log10(p-value)")
+```
+```{r}
+
+# -------------------------------
+# 2. Clean White Wine Data (Remove Extreme Residuals Only)
+# -------------------------------
+# Fit an initial regression model for white wine
+lm_white_initial <- lm(quality ~ ., data = white_wine)
+
+# Compute standardized residuals
+white_wine$residuals <- rstandard(lm_white_initial)
+
+# Identify outliers with extreme residuals (|residual| > 3)
+extreme_residuals <- abs(white_wine$residuals) > 3
+
+# Remove only those extreme residual outliers
+white_wine_cleaned <- white_wine[!extreme_residuals, ]
+
+# Drop "density" and "residuals" columns correctly
+white_wine_cleaned <- white_wine_cleaned[, !(names(white_wine_cleaned) %in% c("density", "residuals"))]
+
+# -------------------------------
+# 3. Prepare Data for LASSO Regression
+# -------------------------------
+# Define predictors (X) and response (y) for red and white wine
+X_red <- as.matrix(red_wine %>% select(-quality))
+y_red <- red_wine$quality
+
+X_white <- as.matrix(white_wine_cleaned %>% select(-quality))
+y_white <- white_wine_cleaned$quality
+
+# Standardize the predictors (LASSO requires scaled data)
+X_red_scaled <- scale(X_red)
+X_white_scaled <- scale(X_white)
+
+# -------------------------------
+# 4. Perform LASSO Regression
+# -------------------------------
+set.seed(123)
+
+# Perform cross-validation to find the best lambda for LASSO
+lasso_cv_red <- cv.glmnet(X_red_scaled, y_red, alpha = 1)
+lasso_cv_white <- cv.glmnet(X_white_scaled, y_white, alpha = 1)
+
+# Get the best lambda
+best_lambda_red <- lasso_cv_red$lambda.min
+best_lambda_white <- lasso_cv_white$lambda.min
+
+# Fit final LASSO models with best lambda
+lasso_red <- glmnet(X_red_scaled, y_red, alpha = 1, lambda = best_lambda_red)
+lasso_white <- glmnet(X_white_scaled, y_white, alpha = 1, lambda = best_lambda_white)
+
+# -------------------------------
+# 5. Extract Important Features from LASSO
+# -------------------------------
+# Get coefficients for red wine model
+lasso_red_coefs <- coef(lasso_red)
+red_important_features <- data.frame(
+  Feature = rownames(lasso_red_coefs),
+  Coefficient = as.vector(lasso_red_coefs)
+) %>%
+  filter(Coefficient != 0) %>%
+  arrange(desc(abs(Coefficient)))
+
+# Get coefficients for white wine model
+lasso_white_coefs <- coef(lasso_white)
+white_important_features <- data.frame(
+  Feature = rownames(lasso_white_coefs),
+  Coefficient = as.vector(lasso_white_coefs)
+) %>%
+  filter(Coefficient != 0) %>%
+  arrange(desc(abs(Coefficient)))
+
+# -------------------------------
+# 6. Print Results
+# -------------------------------
+print("Most Important Features for Red Wine (LASSO Selected):")
+print(red_important_features)
+
+print("Most Important Features for White Wine (LASSO Selected):")
+print(white_important_features)
+
+# -------------------------------
+# 7. Visualize Feature Importance (LASSO Coefficients)
+# -------------------------------
+# Red Wine Feature Importance Plot
+ggplot(red_important_features, aes(x = reorder(Feature, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = "red") +
+  coord_flip() +
+  labs(title = "LASSO-Selected Features for Red Wine", x = "Features", y = "Coefficient")
+
+# White Wine Feature Importance Plot
+ggplot(white_important_features, aes(x = reorder(Feature, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "LASSO-Selected Features for White Wine", x = "Features", y = "Coefficient")
+```
+
