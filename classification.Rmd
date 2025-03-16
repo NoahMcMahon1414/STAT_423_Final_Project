@@ -85,7 +85,7 @@ library(ggplot2)
 
 set.seed(423) # For Consistency
 
-k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50)
+k_values <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19, 21, 25, 28, 30, 33, 36, 42, 50, 65, 80, 95, 110, 125, 150)
 
 accuracy_values <- sapply(k_values, function(k) {
   red_classifier <- knn(train = train_red_sc, 
@@ -103,6 +103,24 @@ ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
   labs(title = "Red Wine Model Accuracy for Different K Values",
        x = "Number of Neighbors (K)",
        y = "Accuracy") +
+  theme_minimal()
+
+mod_accuracy_values <- sapply(k_values, function(k) {
+  red_classifier <- knn(train = train_red_sc, 
+                        test = test_red_sc, 
+                        cl = train_red$quality, 
+                        k = k)
+  mean(as.numeric(red_classifier) == as.numeric(test_red$quality) | as.numeric(red_classifier) == as.numeric(test_red$quality) - 1 | as.numeric(red_classifier) == as.numeric(test_red$quality) + 1)
+})
+
+mod_data <- data.frame(K = k_values, Accuracy = mod_accuracy_values)
+
+ggplot(mod_data, aes(x = K, y = Accuracy)) +
+  geom_line(color = "pink", size = 1) +
+  geom_point(color = "pink", size = 3) +
+  labs(title = "Red Wine Model Modified Accuracy for Different K Values",
+       x = "Number of Neighbors (K)",
+       y = "Modified Accuracy") +
   theme_minimal()
 
 ```
@@ -127,6 +145,24 @@ ggplot(accuracy_data, aes(x = K, y = Accuracy)) +
   labs(title = "Model Accuracy for Different K Values",
        x = "Number of Neighbors (K)",
        y = "Accuracy") +
+  theme_minimal()
+
+mod_accuracy_values <- sapply(k_values, function(k) {
+  white_classifier <- knn(train = train_white_sc, 
+                        test = test_white_sc, 
+                        cl = train_white$quality, 
+                        k = k)
+  mean(as.numeric(white_classifier) == as.numeric(test_white$quality) | as.numeric(white_classifier) == as.numeric(test_white$quality) - 1 | as.numeric(white_classifier) == as.numeric(test_white$quality) + 1)
+})
+
+mod_data <- data.frame(K = k_values, Accuracy = mod_accuracy_values)
+
+ggplot(mod_data, aes(x = K, y = Accuracy)) +
+  geom_line(color = "grey", size = 1) +
+  geom_point(color = "grey", size = 3) +
+  labs(title = "White Wine Model Modified Accuracy for Different K Values",
+       x = "Number of Neighbors (K)",
+       y = "Modified Accuracy") +
   theme_minimal()
 
 ```
@@ -173,14 +209,15 @@ cm
 ```
 ```{r Accuracy: Red Wines}
 
-red_rf_accuracy <- 1 - mean(red_pred != test_red$quality)
+red_rf_accuracy <- mean(as.numeric(red_pred) == as.numeric(test_red$quality) | as.numeric(red_pred) == as.numeric(test_red$quality) - 1 | as.numeric(red_pred) == as.numeric(test_red$quality) + 1)
 red_rf_accuracy
 
 ```
 
 ```{r Accuracy: White Wines}
 
-white_rf_accuracy <- 1 - mean(white_pred != test_white$quality)
+white_rf_accuracy <- mean(as.numeric(white_pred) == as.numeric(test_white$quality) | as.numeric(white_pred) == as.numeric(test_white$quality) - 1 | as.numeric(white_pred) == as.numeric(test_white$quality) + 1)
+
 white_rf_accuracy
 
 ```
